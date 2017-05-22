@@ -1,6 +1,6 @@
 ﻿namespace Match3
 {
-    partial class Form1
+    partial class StartForm
     {
         /// <summary>
         /// Обязательная переменная конструктора.
@@ -42,13 +42,14 @@
             this.StartButton.UseVisualStyleBackColor = true;
             this.StartButton.Click += new System.EventHandler(this.StartButton_Click);
             // 
-            // Form1
+            // StartForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(428, 391);
             this.Controls.Add(this.StartButton);
-            this.Name = "Form1";
+            this.Name = "StartForm";
+            this.Text = "StartForm";
             this.ResumeLayout(false);
 
         }
