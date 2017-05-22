@@ -33,6 +33,7 @@
             this.ScoreLabel = new System.Windows.Forms.Label();
             this.GameField = new System.Windows.Forms.PictureBox();
             this.timer = new System.Windows.Forms.Timer(this.components);
+            this.repaintTimer = new System.Windows.Forms.Timer(this.components);
             ((System.ComponentModel.ISupportInitialize)(this.GameField)).BeginInit();
             this.SuspendLayout();
             // 
@@ -62,11 +63,17 @@
             this.GameField.TabIndex = 2;
             this.GameField.TabStop = false;
             this.GameField.Paint += new System.Windows.Forms.PaintEventHandler(this.GameField_Paint);
+            this.GameField.MouseClick += new System.Windows.Forms.MouseEventHandler(this.GameField_MouseClick);
             // 
             // timer
             // 
             this.timer.Interval = 1000;
             this.timer.Tick += new System.EventHandler(this.timer_Tick);
+            // 
+            // repaintTimer
+            // 
+            this.repaintTimer.Interval = 10;
+            this.repaintTimer.Tick += new System.EventHandler(this.repaintTimer_Tick);
             // 
             // GameForm
             // 
@@ -90,5 +97,6 @@
         private System.Windows.Forms.Label ScoreLabel;
         private System.Windows.Forms.PictureBox GameField;
         private System.Windows.Forms.Timer timer;
+        private System.Windows.Forms.Timer repaintTimer;
     }
 }
