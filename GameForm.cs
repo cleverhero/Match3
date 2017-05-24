@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 
 public enum FigureType { Rectangle, Trianlge }
-public enum GameState { Activated, Normal, Movement }
+public enum GameState { Activated, Normal, Movement, Test }
 
 namespace Match3
 {
@@ -51,8 +51,9 @@ namespace Match3
 
         private int score;
         private uint time;
-        private Tile[][] fields;
-        private Point activeField;
+        private Tile[][] field;
+        private Point activeTile;
+        private Point oldActiveTile;
         private GameState state;
 
         public GameForm()
@@ -89,15 +90,15 @@ namespace Match3
                 {
                     if (delta > 0)
                     {
-                        fields[i][j + delta] = fields[i][j];
-                        fields[i][j + delta].SetShift(new Point(0, -delta * size));
+                        field[i][j + delta] = field[i][j];
+                        field[i][j + delta].SetShift(new Point(0, -delta * size));
                     }
                     if (removedTiles[i][j]) delta++;
                 }
                 for (int j = 0; j < delta; j++) {
                     int ind = rnd.Next(0, 5);
-                    fields[i][j] = new Tile(figureKinds[ind].Type, figureKinds[ind].Color);
-                    fields[i][j].SetShift(new Point(0, -delta * size));
+                    field[i][j] = new Tile(figureKinds[ind].Type, figureKinds[ind].Color);
+                    field[i][j].SetShift(new Point(0, -delta * size));
                 }
             }        
         }
@@ -113,7 +114,7 @@ namespace Match3
             for (int i = 1; i < COUNT - 1; i++)
                 for (int j = 0; j < COUNT; j++)
                 {
-                    if (fields[i][j] == fields[i - 1][j] && fields[i][j] == fields[i + 1][j])
+                    if (field[i][j] == field[i - 1][j] && field[i][j] == field[i + 1][j])
                     {
                         removedTiles[i][j]     = true;
                         removedTiles[i - 1][j] = true;
@@ -124,7 +125,7 @@ namespace Match3
             for (int i = 0; i < COUNT; i++)
                 for (int j = 1; j < COUNT - 1; j++)
                 {
-                    if (fields[i][j] == fields[i][j - 1] && fields[i][j] == fields[i][j + 1])
+                    if (field[i][j] == field[i][j - 1] && field[i][j] == field[i][j + 1])
                     {
                         removedTiles[i][j]     = true;
                         removedTiles[i][j - 1] = true;
@@ -143,14 +144,14 @@ namespace Match3
         {
             Random rnd = new Random();
 
-            fields = new Tile[COUNT][];
+            field = new Tile[COUNT][];
             for (int i = 0; i < COUNT; i++)
             {
-                fields[i] = new Tile[COUNT];
+                field[i] = new Tile[COUNT];
                 for (int j = 0; j < COUNT; j++)
                 {
                     int ind = rnd.Next(0, 5);
-                    fields[i][j] = new Tile(figureKinds[ind].Type, figureKinds[ind].Color);
+                    field[i][j] = new Tile(figureKinds[ind].Type, figureKinds[ind].Color);
                 }
             }
         }
@@ -170,7 +171,7 @@ namespace Match3
                 for (int j = 0; j < COUNT; j++)
                 {
                     Point position = new Point(Convert.ToInt32(width * i), Convert.ToInt32(width * j));
-                    fields[i][j].Draw(paintbox, position, size);
+                    field[i][j].Draw(paintbox, position, size);
                 }
 
             Pen pen = new Pen(Color.Black, 2.0f);
@@ -197,12 +198,12 @@ namespace Match3
         private void GameForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             timer.Stop();
-            fields[activeField.X][activeField.Y].StopRotate();
+            field[activeTile.X][activeTile.Y].StopRotate();
         }
 
         private void GameField_MouseClick(object sender, MouseEventArgs e)
         {
-            fields[activeField.X][activeField.Y].StopRotate();
+            field[activeTile.X][activeTile.Y].StopRotate();
 
             float width = this.GameField.Width / COUNT;
             Point size = new Point(Convert.ToInt32(width), Convert.ToInt32(width));
@@ -213,13 +214,13 @@ namespace Match3
 
             if (state == GameState.Normal)
             {
-                activeField = newPos;
+                activeTile = newPos;
                 state = GameState.Activated;
-                fields[activeField.X][activeField.Y].StartRotate();
+                field[activeTile.X][activeTile.Y].StartRotate();
             }
             else if (state == GameState.Activated)
             {
-                Point oldPos = activeField;
+                Point oldPos = activeTile;
                 state = GameState.Normal;
 
                 int dx = Math.Abs(oldPos.X - newPos.X);
@@ -227,17 +228,11 @@ namespace Match3
                 if (dx + dy != 1)
                     return;
 
-                Tile std = fields[newPos.X][newPos.Y];
-                fields[newPos.X][newPos.Y] = fields[oldPos.X][oldPos.Y];
-                fields[oldPos.X][oldPos.Y] = std;
+                swap(oldPos, newPos);
+                activeTile = newPos;
+                oldActiveTile = oldPos;
 
-                fields[oldPos.X][oldPos.Y].SetShift(new Point((newPos.X - oldPos.X) * size.X, 
-                                                              (newPos.Y - oldPos.Y) * size.X));
-
-                fields[newPos.X][newPos.Y].SetShift(new Point((oldPos.X - newPos.X) * size.X,
-                                                              (oldPos.Y - newPos.Y) * size.X));
-
-                state = GameState.Movement;
+                state = GameState.Test;
                 movementTimer.Start();
             }
         }
@@ -247,11 +242,26 @@ namespace Match3
             GameField.Refresh();
         }
 
+        private void swap(Point pos1, Point pos2)
+        {
+            int size = Convert.ToInt32(this.GameField.Width / COUNT);
+
+            Tile std = field[pos1.X][pos1.Y];
+            field[pos1.X][pos1.Y] = field[pos2.X][pos2.Y];
+            field[pos2.X][pos2.Y] = std;
+
+            field[pos2.X][pos2.Y].SetShift(new Point((pos1.X - pos2.X) * size,
+                                                     (pos1.Y - pos2.Y) * size));
+
+            field[pos1.X][pos1.Y].SetShift(new Point((pos2.X - pos1.X) * size,
+                                                     (pos2.Y - pos1.Y) * size));
+        }
+
         private void movementTimer_Tick(object sender, EventArgs e)
         {
             for (int i = 0; i < COUNT; i++)
                 for (int j = 0; j < COUNT; j++)
-                    if (fields[i][j].IsAnimated) return;
+                    if (field[i][j].IsAnimated) return;
 
             int dscore = CheckField();
             score += dscore;
@@ -259,146 +269,13 @@ namespace Match3
 
             if (dscore == 0)
             {
-                (sender as Timer).Stop();
+                if (state == GameState.Test) swap(activeTile, oldActiveTile);
                 state = GameState.Normal;
+                (sender as Timer).Stop();
             }
+            if (state == GameState.Test) state = GameState.Movement;
             RemoveTiles();
         }
     }
 
-    public class Tile : System.Object
-    {
-        public float Angle
-        {
-            get { return angle; }
-            set { angle = value; }
-        }
-        public Point Shift
-        {
-            get { return shift; }
-            set { shift = value; }
-        }
-        public bool IsAnimated
-        {
-            get { return isAnimated; }
-            set { isAnimated = value; }
-        }
-
-        const int SPEED = 3;
-        const float ANGLE_SPEED = 3.0f;
-        const int DSIZE = 8;
-
-        private float angle;
-        private bool isAnimated;
-        private Point shift;
-        private FigureType type;
-        private Color color;
-        private Timer rotateTimer;
-        private Timer translationTimer;
-
-        public Tile(FigureType _type, Color _color)
-        {
-            angle = 0.0f;
-            shift = new Point(0, 0);
-            type = _type;
-            color = _color;
-            isAnimated = false;
-
-            rotateTimer = new Timer();
-            rotateTimer.Interval = 10;
-            rotateTimer.Tick += new EventHandler(RotateTickEvent);
-
-            translationTimer = new Timer();
-            translationTimer.Interval = 10;
-            translationTimer.Tick += new EventHandler(TranslationTickEvent);
-            translationTimer.Start();
-        }
-
-        public void RotateTickEvent(object sender, EventArgs e)
-        {
-            angle += 3f;
-        }
-
-        public void StartRotate()
-        {
-            rotateTimer.Start();
-        }
-
-        public void StopRotate()
-        {
-            rotateTimer.Stop();
-            angle = 0.0f;
-        }
-
-        public void TranslationTickEvent(object sender, EventArgs e)
-        {
-            if (Math.Abs(shift.X + shift.Y) < SPEED)
-            {
-                isAnimated = false;
-                return;
-            }
-            shift.X -= SPEED * Math.Sign(shift.X);
-            shift.Y -= SPEED * Math.Sign(shift.Y);
-        }
-
-        public void SetShift(Point newShift)
-        {
-            shift = newShift;
-            isAnimated = true;
-        }
-
-        public static bool operator ==(Tile a, Tile b)
-        {
-            return a.Equals(b);
-        }
-
-        public static bool operator !=(Tile a, Tile b)
-        {
-            return !a.Equals(b);
-        }
-
-        public override bool Equals(System.Object obj)
-        {
-            Tile other = obj as Tile;
-            if (color == other.color && type == other.type) return true;
-            return false;
-        }
-
-        public override int GetHashCode()
-        {
-            return 0;
-        }
-
-        public void Draw(Graphics g, Point pos, Point size)
-        {
-            int shift_x = shift.X + pos.X + size.X / 2;
-            int shift_y = shift.Y + pos.Y + size.Y / 2;
-            g.TranslateTransform(shift_x, shift_y);
-            g.RotateTransform(angle);
-
-            SolidBrush brush = new SolidBrush(Color.FromArgb(255, color));
-            if (type == FigureType.Rectangle)
-            {
-                g.FillRectangle(brush, new RectangleF(-size.X / 2 + DSIZE, 
-                                                      -size.Y / 2 + DSIZE, 
-                                                       size.X - 2 * DSIZE, 
-                                                       size.Y - 2 * DSIZE));
-            }
-            else
-            {
-                double r = Math.Sqrt(Math.Pow(size.X - 2 * DSIZE, 2) + Math.Pow(size.Y - 2 * DSIZE, 2))/ 2;
-
-                Point[] points = new Point[3]
-                {
-                    new Point(-size.X / 2 + DSIZE, size.Y / 2 - DSIZE),
-                    new Point(0, -Convert.ToInt32(r)),
-                    new Point(size.X / 2 - DSIZE, size.Y / 2 - DSIZE)
-                };
-                g.FillPolygon(brush, points);
-            }
-
-            g.RotateTransform(-angle);
-            g.TranslateTransform(-shift_x, -shift_y);
-        }
-    }
 }
