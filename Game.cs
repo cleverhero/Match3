@@ -36,8 +36,8 @@ namespace Match3
 
         private void OnGameFormClosed(object sender, EventArgs e)
         {
-            MessageBox.Show("Вы набрали 0");
-            
+            MessageBox.Show("Game Over");
+
             startform = new StartForm();
             startform.Closed += new EventHandler(OnStartFormClosed);
             startform.Show();

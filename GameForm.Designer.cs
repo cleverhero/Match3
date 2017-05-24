@@ -34,6 +34,7 @@
             this.GameField = new System.Windows.Forms.PictureBox();
             this.timer = new System.Windows.Forms.Timer(this.components);
             this.repaintTimer = new System.Windows.Forms.Timer(this.components);
+            this.movementTimer = new System.Windows.Forms.Timer(this.components);
             ((System.ComponentModel.ISupportInitialize)(this.GameField)).BeginInit();
             this.SuspendLayout();
             // 
@@ -75,6 +76,11 @@
             this.repaintTimer.Interval = 10;
             this.repaintTimer.Tick += new System.EventHandler(this.repaintTimer_Tick);
             // 
+            // movementTimer
+            // 
+            this.movementTimer.Interval = 10;
+            this.movementTimer.Tick += new System.EventHandler(this.movementTimer_Tick);
+            // 
             // GameForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
@@ -98,5 +104,6 @@
         private System.Windows.Forms.PictureBox GameField;
         private System.Windows.Forms.Timer timer;
         private System.Windows.Forms.Timer repaintTimer;
+        private System.Windows.Forms.Timer movementTimer;
     }
 }
