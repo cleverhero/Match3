@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Collections;
 
 public enum FigureType { Rectangle, Trianlge }
 public enum GameState { Activated, Normal }
@@ -73,7 +74,7 @@ namespace Match3
                 {
                     int ind = rnd.Next(0, 5);
                     fields[i][j] = new Field(figures[ind].Type, figures[ind].Color);
-                } 
+                }
             }
 
             timer.Start();
@@ -90,7 +91,7 @@ namespace Match3
             Graphics paintbox = e.Graphics;
             float width = this.GameField.Width / count;
             Point size = new Point(Convert.ToInt32(width), Convert.ToInt32(width));
-            
+
             for (int i = 0; i < count; i++)
                 for (int j = 0; j < count; j++)
                 {
@@ -122,39 +123,46 @@ namespace Match3
         private void GameForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             timer.Stop();
-            fields[activeField.X][activeField.Y].StopAnimation();
+            fields[activeField.X][activeField.Y].StopRotate();
         }
 
         private void GameField_MouseClick(object sender, MouseEventArgs e)
         {
+            fields[activeField.X][activeField.Y].StopRotate();
+
+            float width = this.GameField.Width / count;
+            Point size = new Point(Convert.ToInt32(width), Convert.ToInt32(width));
+            Point newPos = new Point(e.X / size.X, e.Y / size.Y);
+
+            if (newPos.X >= count || newPos.Y >= count || newPos.X < 0 || newPos.Y < 0)
+                return;
+
             if (state == GameState.Normal)
             {
-                fields[activeField.X][activeField.Y].StopAnimation();
-                float width = this.GameField.Width / count;
-                Point size = new Point(Convert.ToInt32(width), Convert.ToInt32(width));
-
-                activeField = new Point(e.X / size.X, e.Y / size.Y);
+                activeField = newPos;
                 state = GameState.Activated;
-                fields[activeField.X][activeField.Y].StartAnimation();
+                fields[activeField.X][activeField.Y].StartRotate();
             }
             if (state == GameState.Activated)
             {
                 Point oldPos = activeField;
-                fields[oldPos.X][oldPos.Y].StopAnimation();
 
-
-                float width = this.GameField.Width / count;
-                Point size = new Point(Convert.ToInt32(width), Convert.ToInt32(width));
-                activeField = new Point(e.X / size.X, e.Y / size.Y);
-
-                int dx = Math.Abs(oldPos.X - activeField.X);
-                int dy = Math.Abs(oldPos.Y - activeField.Y);
+                int dx = Math.Abs(oldPos.X - newPos.X);
+                int dy = Math.Abs(oldPos.Y - newPos.Y);
                 if (dx + dy != 1)
-                {
-                    fields[activeField.X][activeField.Y].StartAnimation();
                     return;
-                }
-                
+
+                Field std = fields[newPos.X][newPos.Y];
+                fields[newPos.X][newPos.Y] = fields[oldPos.X][oldPos.Y];
+                fields[oldPos.X][oldPos.Y] = std;
+
+                fields[oldPos.X][oldPos.Y].Shift = new Point((newPos.X - oldPos.X) * size.X, 
+                                                             (newPos.Y - oldPos.Y) * size.X);
+
+                fields[newPos.X][newPos.Y].Shift = new Point((oldPos.X - newPos.X) * size.X,
+                                                             (oldPos.Y - newPos.Y) * size.X);
+
+                state = GameState.Normal;
             }
         }
 
@@ -181,7 +189,8 @@ namespace Match3
         private Point shift;
         private FigureType type;
         private Color color;
-        private Timer animationTimer;
+        private Timer rotateTimer;
+        private Timer translationTimer;
 
         public Field(FigureType _type, Color _color)
         {
@@ -190,26 +199,36 @@ namespace Match3
             type = _type;
             color = _color;
 
-            animationTimer = new Timer();
-            animationTimer.Interval = 10;
-            animationTimer.Tick += new EventHandler(TickEvent);
+            rotateTimer = new Timer();
+            rotateTimer.Interval = 10;
+            rotateTimer.Tick += new EventHandler(RotateTickEvent);
+
+            translationTimer = new Timer();
+            translationTimer.Interval = 10;
+            translationTimer.Tick += new EventHandler(TranslationTickEvent);
+            translationTimer.Start();
         }
 
-        public void TickEvent(object sender, EventArgs e)
+        public void RotateTickEvent(object sender, EventArgs e)
         {
             angle += 3f;
         }
 
-        public void StartAnimation()
+        public void StartRotate()
         {
-            animationTimer.Start();
+            rotateTimer.Start();
         }
 
-        public void StopAnimation()
+        public void StopRotate()
         {
-            animationTimer.Stop();
+            rotateTimer.Stop();
             angle = 0.0f;
-            shift = new Point(0, 0);
+        }
+
+        public void TranslationTickEvent(object sender, EventArgs e)
+        {
+            shift.X -= 5 * Math.Sign(shift.X);
+            shift.Y -= 5 * Math.Sign(shift.Y);
         }
 
         public void Draw(Graphics g, Point pos, Point size)
